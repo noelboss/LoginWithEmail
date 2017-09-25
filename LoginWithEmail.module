@@ -43,7 +43,7 @@ class LoginWithEmail extends WireData implements Module
         // hook into session::login to get user by mail
         // this works regardless of the name of the input field
         wire()->addHookBefore('Session::login', function (HookEvent $event) {
-            // grab the login name from input (backend login) and check if mail
+            // grab the login name from input (backend login) and check if is mail
             $mail = wire('input')->post->email('login_name');
 
             // if not backendlogin its an api login, grab directly from arguments
@@ -52,11 +52,15 @@ class LoginWithEmail extends WireData implements Module
             // do something only if login is valid email (not username)
             if ($mail) {
                 // check if a user with the email exists
-                $user = wire('users')->get('email='.$mail);
+
+                $matches = $this->wire('users')->find("include=all, email=$mail");
+                $qty = $matches->count();
 
                 // if valid user set login name argument
-                if ($user->id) {
-                    $event->setArgument('name', $user->name);
+                if ($qty === 1) {
+                    $event->setArgument('name', $matches->first()->name);
+                } elseif ($qty > 1) {
+                    $this->error($this->_('Cannot login because more than one account uses this email address.'));
                 }
             }
         });
